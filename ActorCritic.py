@@ -4,7 +4,12 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
-
+def set_seed(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    environment = gym.make('CartPole-v1')
+    return environment
+    
 class ActorCritic(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(ActorCritic, self).__init__()
@@ -27,8 +32,7 @@ class ActorCritic(nn.Module):
         critic_output = self.critic(state)
         return actor_output, critic_output
     
-def A2C(learning_rate, n_repetitions, gamma):
-    environment = gym.make('CartPole-v1')
+def A2C(environment, seed, learning_rate, n_repetitions, gamma):
     input_size = environment.observation_space.shape[0]
     hidden_size = 32
     output_size = environment.action_space.n
@@ -39,13 +43,13 @@ def A2C(learning_rate, n_repetitions, gamma):
     
     rewards = []
     for repetition in range(n_repetitions):
-        state, _ = environment.reset()
+        state, _ = environment.reset(seed=seed)
         state = torch.tensor(state, dtype=torch.float32)
         total_reward = 0
         done = False
         count = 0
         while not done:
-            if count > 500:
+            if count >= 500:
                 break
             count += 1
             probabilities, values = model(state)
@@ -67,6 +71,8 @@ def A2C(learning_rate, n_repetitions, gamma):
             actor_loss.backward()
             critic_loss.backward()
             
+            
+            
             optimizer_actor.step()
             optimizer_critic.step()
             state = next_state
@@ -76,15 +82,19 @@ def A2C(learning_rate, n_repetitions, gamma):
         
         rewards.append(total_reward)
         print(f"Repetition {repetition}, Actor Loss: {actor_loss.item()}, Critic Loss: {critic_loss.item()}, Reward: {total_reward}, Count: {count}")
-    torch.save(model.state_dict(), 'model_weights5.pth')    
+    torch.save(model.state_dict(), 'model_weights.pth')    
     
     plt.plot(rewards)
     plt.xlabel('Repetition')
     plt.ylabel('Reward')
     plt.title('Actor 2 Critic')
     plt.show()
+    plt.savefig('CartPole.png')
     
-A2C(learning_rate=0.001, n_repetitions=1000, gamma=0.99)
+    
+seed = 20
+environment = set_seed(seed)
+A2C(environment=environment, seed=seed, learning_rate=0.001, n_repetitions=1000, gamma=0.99)
 
 
 
@@ -95,7 +105,7 @@ hidden_size = 32
 output_size = environment.action_space.n
 
 model = ActorCritic(input_size, hidden_size, output_size)
-model.load_state_dict(torch.load('model_weights5.pth'))
+model.load_state_dict(torch.load('model_weights.pth'))
 
 state, _ = environment.reset()
 state = torch.tensor(state, dtype=torch.float32)
