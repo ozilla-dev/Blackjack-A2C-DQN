@@ -19,7 +19,7 @@ class ActorCritic(nn.Module):
             nn.Linear(hidden_size, 1)
         )
         
-        self.softmax = nn.Softmax(dim=-1) # the action dimension is -1
+        self.softmax = nn.Softmax(dim=0)
 
     def forward(self, state):
         actor_output = self.actor(state)
@@ -27,14 +27,14 @@ class ActorCritic(nn.Module):
         critic_output = self.critic(state)
         return actor_output, critic_output
     
-def A2C(learning_rate, n_repetitions, n_timesteps, gamma):
+def A2C(learning_rate, n_repetitions, gamma):
     environment = gym.make('CartPole-v1')
     input_size = environment.observation_space.shape[0]
-    hidden_size = 16
+    hidden_size = 32
     output_size = environment.action_space.n
 
     model = ActorCritic(input_size, hidden_size, output_size)
-    optimizer_actor = torch.optim.Adam(model.actor.parameters(), lr=learning_rate) # minimizes the loss
+    optimizer_actor = torch.optim.Adam(model.actor.parameters(), lr=0.0005) # minimizes the loss
     optimizer_critic = torch.optim.Adam(model.critic.parameters(), lr=learning_rate) # minimizes the loss
     
     rewards = []
@@ -43,22 +43,22 @@ def A2C(learning_rate, n_repetitions, n_timesteps, gamma):
         state = torch.tensor(state, dtype=torch.float32)
         total_reward = 0
         done = False
-        for timestep in range(n_timesteps):
-            probabilities, values = model.forward(state)
+        count = 0
+        while not done:
+            if count > 500:
+                break
+            count += 1
+            probabilities, values = model(state)
             distribution = torch.distributions.Categorical(probabilities)
 
             action = distribution.sample()
             
             next_state, reward, done, _, _ = environment.step(action.item())
             next_state = torch.tensor(next_state, dtype=torch.float32)
-            _, next_values = model.forward(next_state)
-            advantage = reward + (gamma * next_values * (1 - int(done))) - values # leave out the future rewards if the episode is done
-            
-            total_reward += reward
-            state = next_state
-
-            actor_loss = -distribution.log_prob(action) * advantage.detach()# detach the advantage because we don't want to update the critic
-            critic_loss = (advantage.square()).mean()
+            _, next_values = model(next_state)
+            advantage = reward + (gamma * next_values.detach() * (1 - int(done))) - values # leave out the future rewards if the episode is done
+            actor_loss = -distribution.log_prob(action) * advantage.detach() # detach the advantage because we don't want to update the critic
+            critic_loss = advantage.square()
             total_reward += reward
             
             optimizer_actor.zero_grad() # reset the gradients
@@ -69,12 +69,14 @@ def A2C(learning_rate, n_repetitions, n_timesteps, gamma):
             
             optimizer_actor.step()
             optimizer_critic.step()
-            if done:
-                break
+            state = next_state
+        if total_reward >= environment.spec.reward_threshold:
+            print("Threshold reached")
+                
         
         rewards.append(total_reward)
-        print(f"Repetition {repetition}, Actor Loss: {actor_loss.item()}, Critic Loss: {critic_loss.item()}, Reward: {total_reward}")
-    torch.save(model.state_dict(), 'model_weights3.pth')    
+        print(f"Repetition {repetition}, Actor Loss: {actor_loss.item()}, Critic Loss: {critic_loss.item()}, Reward: {total_reward}, Count: {count}")
+    torch.save(model.state_dict(), 'model_weights5.pth')    
     
     plt.plot(rewards)
     plt.xlabel('Repetition')
@@ -82,25 +84,25 @@ def A2C(learning_rate, n_repetitions, n_timesteps, gamma):
     plt.title('Actor 2 Critic')
     plt.show()
     
-A2C(learning_rate=0.001, n_repetitions=1000, n_timesteps=100000, gamma=0.99)
+A2C(learning_rate=0.001, n_repetitions=1000, gamma=0.99)
 
 
 
 # After trainings
 environment = gym.make('CartPole-v1', render_mode='human')
 input_size = environment.observation_space.shape[0]
-hidden_size = 16
+hidden_size = 32
 output_size = environment.action_space.n
 
 model = ActorCritic(input_size, hidden_size, output_size)
-model.load_state_dict(torch.load('model_weights3.pth'))
+model.load_state_dict(torch.load('model_weights5.pth'))
 
 state, _ = environment.reset()
 state = torch.tensor(state, dtype=torch.float32)
 done = False
 while not done:
     environment.render()
-    probabilities, _ = model.forward(state)
+    probabilities, _ = model(state)
     distribution = torch.distributions.Categorical(probabilities)
     action = distribution.sample()
     state, _, done, _, _ = environment.step(action.item())
