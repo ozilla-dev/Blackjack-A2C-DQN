@@ -23,6 +23,18 @@ class ActorCriticDiscrete(nn.Module):
         critic_output = self.critic(state)
         return actor_output, critic_output
     
+class DeepQLearning(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(DeepQLearning, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, output_size)
+        )
+    def forward(self, state):
+        output = self.model(state)
+        return output
+    
 class ActorCriticContinuous(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(ActorCriticContinuous, self).__init__()
