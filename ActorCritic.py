@@ -191,25 +191,25 @@ def test_random():
     return total_wins, total_losses, total_draws
 
 def experiment(tests, seeds, n_repetitions):
-    # for agent in ['A2C', 'DQL']:
-    #     total_rewards = np.zeros((len(seeds), n_repetitions))
-    #     for i, seed in enumerate(seeds):
-    #         environment = set_seed(seed)
-    #         if agent == 'A2C':
-    #             rewards = A2C_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
-    #         elif agent == 'DQL':
-    #             rewards = DQL_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
-    #         total_rewards[i] = rewards
-    #     mean_rewards = np.mean(total_rewards, axis=0)
-    #     window = 100
-    #     smoothed_rewards = savgol_filter(mean_rewards, window, 1)
-    #     plt.plot(smoothed_rewards)
-    #     plt.xlabel('Repetitions')
-    #     plt.ylabel('Reward')
-    #     plt.ylim(-1, 1)
-    #     plt.title(f'Reward vs Repetitions with {agent} model')
-    #     plt.savefig(f'{agent}_rewards.png')
-    #     plt.close()
+    for agent in ['A2C', 'DQL']:
+        total_rewards = np.zeros((len(seeds), n_repetitions))
+        for i, seed in enumerate(seeds):
+            environment = set_seed(seed)
+            if agent == 'A2C':
+                rewards = A2C_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
+            elif agent == 'DQL':
+                rewards = DQL_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
+            total_rewards[i] = rewards
+        mean_rewards = np.mean(total_rewards, axis=0)
+        window = 100
+        smoothed_rewards = savgol_filter(mean_rewards, window, 1)
+        plt.plot(smoothed_rewards)
+        plt.xlabel('Repetitions')
+        plt.ylabel('Reward')
+        plt.ylim(-1, 1)
+        plt.title(f'Reward vs Repetitions with {agent} model')
+        plt.savefig(f'{agent}_rewards.png')
+        plt.close()
     
     human_rates = [4222, 848, 4910]
     for agent in ['Random', 'A2C', 'DQL']:
