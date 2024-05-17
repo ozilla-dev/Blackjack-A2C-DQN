@@ -13,7 +13,7 @@ def set_seed(seed):
     environment = gym.make("Blackjack-v1")
     return environment
     
-def A2C_blackjack(environment, seed, learning_rate, n_repetitions, gamma):
+def A2C_blackjack(model_info, environment, seed, learning_rate, n_repetitions, gamma):
     total_rewards = np.zeros(n_repetitions)
     
     environment = set_seed(seed)
@@ -22,7 +22,7 @@ def A2C_blackjack(environment, seed, learning_rate, n_repetitions, gamma):
     output_size = environment.action_space.n
     
     model = ActorCriticDiscrete(input_size, hidden_size, output_size)
-    optimizer_actor = torch.optim.Adam(model.actor.parameters(), lr=0.0005) # minimizes the loss
+    optimizer_actor = torch.optim.Adam(model.actor.parameters(), lr=learning_rate) # minimizes the loss
     optimizer_critic = torch.optim.Adam(model.critic.parameters(), lr=learning_rate) # minimizes the loss
     
     wins = np.zeros(n_repetitions)
@@ -69,10 +69,10 @@ def A2C_blackjack(environment, seed, learning_rate, n_repetitions, gamma):
             state = next_state
         # print(f"Repetition {repetition}, Actor Loss: {actor_loss.item()}, Critic Loss: {critic_loss.item()}, Reward: {total_reward}, Count: {count}")
     environment.close()
-    torch.save(model.state_dict(), 'A2C_blackjack.pth')
+    torch.save(model.state_dict(), f'A2C_blackjack_{model_info}.pth')
     return total_rewards
 
-def DQL_blackjack(environment, seed, learning_rate, n_repetitions, gamma):
+def DQL_blackjack(model_info, environment, seed, learning_rate, n_repetitions, gamma):
     total_rewards = np.zeros(n_repetitions)
     
     environment = set_seed(seed)
@@ -130,7 +130,7 @@ def DQL_blackjack(environment, seed, learning_rate, n_repetitions, gamma):
                 optimizer.step()
                 state = next_state
     environment.close()
-    torch.save(model.state_dict(), 'DQL_blackjack.pth')
+    torch.save(model.state_dict(), f'DQL_blackjack_{model_info}.pth')
     return total_rewards
         
 
@@ -165,7 +165,7 @@ def test(input_size, hidden_size, output_size, weights, A2C):
                     total_draws += 1
             state = torch.tensor(next_state, dtype=torch.float32)
     environment.close()
-    print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
+    # print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
     return total_wins, total_losses, total_draws
     
 def test_random():
@@ -187,69 +187,104 @@ def test_random():
                 else:
                     total_draws += 1
     environment.close()
-    print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
+    # print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
     return total_wins, total_losses, total_draws
 
 def experiment(tests, seeds, n_repetitions):
-    for agent in ['A2C', 'DQL']:
-        total_rewards = np.zeros((len(seeds), n_repetitions))
-        for i, seed in enumerate(seeds):
-            environment = set_seed(seed)
-            if agent == 'A2C':
-                rewards = A2C_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
-            elif agent == 'DQL':
-                rewards = DQL_blackjack(environment, seed=seed, learning_rate=0.001, n_repetitions=n_repetitions, gamma=0.5)
-            total_rewards[i] = rewards
-        mean_rewards = np.mean(total_rewards, axis=0)
-        window = 100
-        smoothed_rewards = savgol_filter(mean_rewards, window, 1)
-        plt.plot(smoothed_rewards)
-        plt.xlabel('Repetitions')
-        plt.ylabel('Reward')
-        plt.ylim(-1, 1)
-        plt.title(f'Reward vs Repetitions with {agent} model')
-        plt.savefig(f'{agent}_rewards.png')
-        plt.close()
+    optimal_values = {'A2C': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0},
+                      'DQL': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0}}
+    
+    learning_rates = [0.0001, 0.0005, 0.001]
+    # for agent in ['A2C', 'DQL']:
+    #     plt.figure()
+    #     for learning_rate in learning_rates:
+    #         model_info = f'{learning_rate}'
+    #         total_rewards = np.zeros((len(seeds), n_repetitions))
+    #         for i, seed in enumerate(seeds):
+    #             environment = set_seed(seed)
+    #             if agent == 'A2C':
+    #                 rewards = A2C_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
+    #             elif agent == 'DQL':
+    #                 rewards = DQL_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
+    #             total_rewards[i] = rewards
+    #         mean_rewards = np.mean(total_rewards, axis=0)
+    #         window = 100
+    #         smoothed_rewards = savgol_filter(mean_rewards, window, 1)
+    #         if np.sum(mean_rewards) > np.sum(optimal_values[agent]["Evaluation"]):
+    #             optimal_values[agent]["Evaluation"] = mean_rewards
+    #             optimal_values[agent]["Learning_rate"] = learning_rate
+    #         plt.plot(smoothed_rewards, label=f'Learning Rate: {learning_rate}')
+    #     plt.xlabel('Number of Repetitions')
+    #     plt.ylabel('Reward')
+    #     plt.ylim(-1, 1)
+    #     plt.legend()
+    #     plt.savefig(f'{agent}_rewards.png')
+    #     plt.close()
+    
+    # plt.figure()
+    # for agent in ['A2C', 'DQL']:
+    #     optimal_value = optimal_values[agent]["Evaluation"]
+    #     window = 100
+    #     smoothed_rewards = savgol_filter(optimal_value, window, 1)
+    #     plt.plot(smoothed_rewards, label=f'{agent} - Learning Rate: {optimal_values[agent]["Learning_rate"]}')
+    # plt.xlabel('Number of Repetitions')
+    # plt.ylabel('Reward')
+    # plt.ylim(-1, 1)
+    # plt.legend()
+    # plt.savefig('optimal_rewards.png')
+    # plt.close()
     
     human_rates = [4222, 848, 4910]
+    labels = ['Wins', 'Draws', 'Losses']
     for agent in ['Random', 'A2C', 'DQL']:
-        total_wins = 0
-        total_draws = 0
-        total_losses = 0
-        for i, seed in enumerate(seeds):
-            environment = set_seed(seed)
-            input_size = len(environment.observation_space)
-            hidden_size = 32
-            output_size = environment.action_space.n
-            if agent == 'A2C':
-                wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights='A2C_blackjack.pth', A2C=True)
-            elif agent == 'DQL':
-                wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights='DQL_blackjack.pth', A2C=False)
+        plt.figure()
+        for lr, learning_rate in enumerate(learning_rates):
+            total_wins = 0
+            total_draws = 0
+            total_losses = 0
+            for i, seed in enumerate(seeds):
+                environment = set_seed(seed)
+                input_size = len(environment.observation_space)
+                hidden_size = 32
+                output_size = environment.action_space.n
+                if agent == 'A2C':
+                    wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
+                    print(f'A2C: Wins: {wins}, Losses: {losses}, Draws: {draws}')
+                elif agent == 'DQL':
+                    wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
+                else:
+                    wins, losses, draws = test_random()
+                total_wins += wins
+                total_draws += draws
+                total_losses += losses
+            average_wins = total_wins / tests
+            average_draws = total_draws / tests
+            average_losses = total_losses / tests
+            
+            x = np.arange(len(labels))
+            if agent == 'A2C' or agent == 'DQL':
+                width = 0.15
+                offset = lr * width
+                plt.bar(x - width + offset, [average_wins, average_draws, average_losses], width, label = f'Learning Rate: {learning_rate}')
             else:
-                wins, losses, draws = test_random()
-            total_wins += wins
-            total_draws += draws
-            total_losses += losses
-        average_wins = total_wins / tests
-        average_draws = total_draws / tests
-        average_losses = total_losses / tests
-        
-        labels = ['Wins', 'Draws', 'Losses']
-        x = np.arange(len(labels))
-        width = 0.35
-        plt.bar(x-0.2, [average_wins, average_draws, average_losses], width, label = 'Model')
-        plt.bar(x+0.2, human_rates, width, color = 'r', label = 'Human')
-        plt.xticks(x, labels)
+                width = 0.35
+                plt.bar(x - 0.2, [average_wins, average_draws, average_losses], width, label = 'Random')
+        if agent == 'A2C' or agent == 'DQL':
+            plt.bar(x - width + len(learning_rates) * width, human_rates, width, color = 'r', label = 'Human')
+            plt.xticks(x + (width / 2), labels)
+        else:
+            plt.bar(x + 0.2, human_rates, width, color = 'r', label = 'Human')
+            plt.xticks(x, labels)
+            
         plt.xlabel('Rates')
-        plt.ylabel('Average Rate')
-        plt.title(f'Average Wins, Draws, and Losses with {agent} model')    
+        plt.ylabel('Number of occurences')   
         plt.ylim(0, 10000)
         plt.legend()
         plt.savefig(f'{agent}_blackjack.png')
         plt.close()
     
 def main():
-    seeds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    seeds = [17, 18, 19, 20]
     environment = gym.make("Blackjack-v1")
     input_size = len(environment.observation_space)
     hidden_size = 32
