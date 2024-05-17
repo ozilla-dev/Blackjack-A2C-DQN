@@ -195,44 +195,44 @@ def experiment(tests, seeds, n_repetitions):
                       'DQL': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0}}
     
     learning_rates = [0.0001, 0.0005, 0.001]
-    # for agent in ['A2C', 'DQL']:
-    #     plt.figure()
-    #     for learning_rate in learning_rates:
-    #         model_info = f'{learning_rate}'
-    #         total_rewards = np.zeros((len(seeds), n_repetitions))
-    #         for i, seed in enumerate(seeds):
-    #             environment = set_seed(seed)
-    #             if agent == 'A2C':
-    #                 rewards = A2C_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
-    #             elif agent == 'DQL':
-    #                 rewards = DQL_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
-    #             total_rewards[i] = rewards
-    #         mean_rewards = np.mean(total_rewards, axis=0)
-    #         window = 100
-    #         smoothed_rewards = savgol_filter(mean_rewards, window, 1)
-    #         if np.sum(mean_rewards) > np.sum(optimal_values[agent]["Evaluation"]):
-    #             optimal_values[agent]["Evaluation"] = mean_rewards
-    #             optimal_values[agent]["Learning_rate"] = learning_rate
-    #         plt.plot(smoothed_rewards, label=f'Learning Rate: {learning_rate}')
-    #     plt.xlabel('Number of Repetitions')
-    #     plt.ylabel('Reward')
-    #     plt.ylim(-1, 1)
-    #     plt.legend()
-    #     plt.savefig(f'{agent}_rewards.png')
-    #     plt.close()
+    for agent in ['A2C', 'DQL']:
+        plt.figure()
+        for learning_rate in learning_rates:
+            model_info = f'{learning_rate}'
+            total_rewards = np.zeros((len(seeds), n_repetitions))
+            for i, seed in enumerate(seeds):
+                environment = set_seed(seed)
+                if agent == 'A2C':
+                    rewards = A2C_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
+                elif agent == 'DQL':
+                    rewards = DQL_blackjack(model_info, environment, seed=seed, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.5)
+                total_rewards[i] = rewards
+            mean_rewards = np.mean(total_rewards, axis=0)
+            window = 100
+            smoothed_rewards = savgol_filter(mean_rewards, window, 1)
+            if np.sum(mean_rewards) > np.sum(optimal_values[agent]["Evaluation"]):
+                optimal_values[agent]["Evaluation"] = mean_rewards
+                optimal_values[agent]["Learning_rate"] = learning_rate
+            plt.plot(smoothed_rewards, label=f'Learning Rate: {learning_rate}')
+        plt.xlabel('Number of Repetitions')
+        plt.ylabel('Reward')
+        plt.ylim(-1, 1)
+        plt.legend()
+        plt.savefig(f'{agent}_rewards.png')
+        plt.close()
     
-    # plt.figure()
-    # for agent in ['A2C', 'DQL']:
-    #     optimal_value = optimal_values[agent]["Evaluation"]
-    #     window = 100
-    #     smoothed_rewards = savgol_filter(optimal_value, window, 1)
-    #     plt.plot(smoothed_rewards, label=f'{agent} - Learning Rate: {optimal_values[agent]["Learning_rate"]}')
-    # plt.xlabel('Number of Repetitions')
-    # plt.ylabel('Reward')
-    # plt.ylim(-1, 1)
-    # plt.legend()
-    # plt.savefig('optimal_rewards.png')
-    # plt.close()
+    plt.figure()
+    for agent in ['A2C', 'DQL']:
+        optimal_value = optimal_values[agent]["Evaluation"]
+        window = 100
+        smoothed_rewards = savgol_filter(optimal_value, window, 1)
+        plt.plot(smoothed_rewards, label=f'{agent} - Learning Rate: {optimal_values[agent]["Learning_rate"]}')
+    plt.xlabel('Number of Repetitions')
+    plt.ylabel('Reward')
+    plt.ylim(-1, 1)
+    plt.legend()
+    plt.savefig('optimal_rewards.png')
+    plt.close()
     
     human_rates = [4222, 848, 4910]
     labels = ['Wins', 'Draws', 'Losses']
@@ -249,7 +249,6 @@ def experiment(tests, seeds, n_repetitions):
                 output_size = environment.action_space.n
                 if agent == 'A2C':
                     wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
-                    print(f'A2C: Wins: {wins}, Losses: {losses}, Draws: {draws}')
                 elif agent == 'DQL':
                     wins, losses, draws = test(input_size=input_size, hidden_size=hidden_size, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
                 else:
