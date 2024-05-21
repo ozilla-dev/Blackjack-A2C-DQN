@@ -5,14 +5,26 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import random
 from scipy.signal import savgol_filter
-from agents import ActorCriticDiscrete, DeepQLearning, ExperienceReplay
+from collections import deque
+from agents import ActorCriticDiscrete, DeepQLearning
 
-def A2C_blackjack(model_info, environment, hidden_size, learning_rate, n_repetitions, gamma):
+def A2C_blackjack(model_info, hidden_size, learning_rate, n_repetitions, gamma):
+    """Advantage Actor-Critic for the Blackjack environment. The model is saved as a .pth file when the training is done.
+    
+    Parameters:
+        model_info (str): The information about the model, so that the model can be saved as a .pth file.
+        hidden_size (int): The size of the hidden layer.
+        learning_rate (float): The learning rate for the optimizer.
+        n_repetitions (int): The number of repetitions to train the model on.
+        gamma (float): The discount factor.
+    
+    Returns:
+        total_reward (np.ndarray): The total rewards for each repetition.
+    """
+    environment = gym.make("Blackjack-v1")
     total_rewards = np.zeros(n_repetitions)
     
-    environment = gym.make("Blackjack-v1")
     input_size = len(environment.observation_space)
-    hidden_size = hidden_size
     output_size = environment.action_space.n
     
     model = ActorCriticDiscrete(input_size, hidden_size, output_size)
@@ -61,23 +73,34 @@ def A2C_blackjack(model_info, environment, hidden_size, learning_rate, n_repetit
             optimizer_actor.step()
             optimizer_critic.step()
             state = next_state
-        # print(f"Repetition {repetition}, Actor Loss: {actor_loss.item()}, Critic Loss: {critic_loss.item()}, Reward: {total_reward}, Count: {count}")
     environment.close()
     torch.save(model.state_dict(), f'A2C_blackjack_{model_info}.pth')
     return total_rewards
 
-def DQL_blackjack(model_info, environment, hidden_size, learning_rate, n_repetitions, gamma):
+def DQL_blackjack(model_info, hidden_size, learning_rate, n_repetitions, gamma):
+    """Deep Q-Learning for the Blackjack environment using an experience buffer. The model is saved as a .pth file when the training is done.
+    
+    Parameters:
+        model_info (str): The information about the model, so that the model can be saved as a .pth file.
+        hidden_size (int): The size of the hidden layer.
+        learning_rate (float): The learning rate for the optimizer.
+        n_repetitions (int): The number of repetitions to train the model on.
+        gamma (float): The discount factor.
+    
+    Returns:
+        total_reward (np.ndarray): The total rewards for each repetition.
+    """
+    environment = gym.make("Blackjack-v1")
     total_rewards = np.zeros(n_repetitions)
     
     input_size = len(environment.observation_space)
-    hidden_size = hidden_size
     output_size = environment.action_space.n
 
     model = DeepQLearning(input_size, hidden_size, output_size)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
     batch_size = 64
-    experience_replay = ExperienceReplay(10000, batch_size)
+    memory = deque(maxlen=10000)
     epsilon = 0.1
     for repetition in range(n_repetitions):
         state, _ = environment.reset()
@@ -96,12 +119,12 @@ def DQL_blackjack(model_info, environment, hidden_size, learning_rate, n_repetit
             if truncation:
                 done = True
             next_state = torch.tensor(next_state, dtype=torch.float32)
-            experience_replay.memory.append((state, action, next_state, reward, done))
+            memory.append((state, action, next_state, reward, done))
             state = next_state
             total_reward += reward
 
-            if len(experience_replay.memory) > batch_size:
-                experiences = random.sample(experience_replay.memory, experience_replay.batch_size)
+            if len(memory) > batch_size:
+                experiences = random.sample(memory, batch_size)
                 states, actions, next_states, rewards, dones = zip(*experiences)
                 states = np.array(states)
                 actions = np.array(actions)
@@ -126,9 +149,22 @@ def DQL_blackjack(model_info, environment, hidden_size, learning_rate, n_repetit
     environment.close()
     torch.save(model.state_dict(), f'DQL_blackjack_{model_info}.pth')
     return total_rewards
-        
 
 def test(input_size, hidden_size, output_size, weights, A2C):
+    """Test the trained model on the Blackjack environment.
+
+    Parameters:
+        input_size (int): The size of the input.
+        hidden_size (int): The size of the hidden layer.
+        output_size (int): The size of the output.
+        weights (str): The path to the weights of the model.
+        A2C (bool): Whether the model is an Actor-Critic model or not.
+        
+    Returns:
+        total_wins (int): The total number of wins.
+        total_losses (int): The total number of losses.
+        total_draws (int): The total number of draws.
+    """
     environment = gym.make("Blackjack-v1")
     if A2C:
         model = ActorCriticDiscrete(input_size, hidden_size, output_size)
@@ -159,10 +195,16 @@ def test(input_size, hidden_size, output_size, weights, A2C):
                     total_draws += 1
             state = torch.tensor(next_state, dtype=torch.float32)
     environment.close()
-    # print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
     return total_wins, total_losses, total_draws
     
 def test_random():
+    """Test the random model on the Blackjack environment.
+
+    Returns:
+        total_wins (int): The total number of wins.
+        total_losses (int): The total number of losses.
+        total_draws (int): The total number of draws.
+    """
     environment = gym.make("Blackjack-v1")
     total_wins = 0
     total_losses = 0
@@ -181,53 +223,98 @@ def test_random():
                 else:
                     total_draws += 1
     environment.close()
-    # print(f"Wins: {total_wins}, Losses: {total_losses}, Draws: {total_draws}")
     return total_wins, total_losses, total_draws
 
-def experiment(n_tests, n_repetitions):
+def experiment(environment, n_tests, n_repetitions):
+    """Run all the experiments for the Blackjack environment and both models and plot the results.
+
+    Parameters:
+        environment (gym.Env): The environment to run the experiments on.
+        n_tests (int): The number of tests to run.
+        n_repetitions (int): The number of repetitions to train the models on.
+    """
     optimal_values = {'A2C': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0},
                       'DQL': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0}}
     
+    input_size = len(environment.observation_space)
+    output_size = environment.action_space.n
+    
     learning_rates = [0.0001, 0.0005, 0.001]
-    # for agent in ['A2C', 'DQL']:
-    #     plt.figure()
-    #     for learning_rate in learning_rates:
-    #         model_info = f'{learning_rate}'
-    #         total_rewards = np.zeros((n_tests, n_repetitions))
-    #         for i in range(n_tests):
-    #             environment = gym.make("Blackjack-v1")
-    #             if agent == 'A2C':
-    #                 rewards = A2C_blackjack(model_info, environment, hidden_size=32, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.99)
-    #             elif agent == 'DQL':
-    #                 rewards = DQL_blackjack(model_info, environment, hidden_size=128, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.3)
-    #             total_rewards[i] = rewards
-    #         mean_rewards = np.mean(total_rewards, axis=0)
-    #         window = 100
-    #         smoothed_rewards = savgol_filter(mean_rewards, window, 1)
-    #         if np.sum(mean_rewards) > np.sum(optimal_values[agent]["Evaluation"]):
-    #             optimal_values[agent]["Evaluation"] = mean_rewards
-    #             optimal_values[agent]["Learning_rate"] = learning_rate
-    #         plt.plot(smoothed_rewards, label=f'Learning Rate: {learning_rate}')
-    #     plt.xlabel('Number of Repetitions')
-    #     plt.ylabel('Average Reward')
-    #     plt.ylim(-1, 1)
-    #     plt.legend()
-    #     plt.savefig(f'{agent}_rewards.png')
-    #     plt.close()
+    window = 180
     
-    # plt.figure()
-    # for agent in ['A2C', 'DQL']:
-    #     optimal_value = optimal_values[agent]["Evaluation"]
-    #     window = 100
-    #     smoothed_rewards = savgol_filter(optimal_value, window, 1)
-    #     plt.plot(smoothed_rewards, label=f'{agent} - Learning Rate: {optimal_values[agent]["Learning_rate"]}')
-    # plt.xlabel('Number of Repetitions')
-    # plt.ylabel('Reward')
-    # plt.ylim(-1, 1)
-    # plt.legend()
-    # plt.savefig('optimal_rewards.png')
-    # plt.close()
+    optimal_values = train_models(n_tests, n_repetitions, learning_rates, window)
+    plot_optimal_curves(optimal_values, window)
+    test_models(n_tests, learning_rates, input_size, output_size)
+        
+def train_models(n_tests, n_repetitions, learning_rates, window):
+    """Train two models on the Blackjack environment and plot the results.
+
+    Parameters:
+        n_tests (int): The number of tests to run.
+        n_repetitions (int): The number of repetitions to train the models on.
+        learning_rates (list): The learning rates to train the models on.
+        window (int): The window size for the smoothing function.
+
+    Returns:
+        optimal_values (dict): The optimal curves for the two models.
+    """
+    optimal_values = {'A2C': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0},
+                      'DQL': {"Evaluation": np.full(n_repetitions, -np.inf), "Learning_rate": 0}}
+    for agent in ['A2C', 'DQL']:
+        plt.figure()
+        for learning_rate in learning_rates:
+            model_info = f'{learning_rate}'
+            total_rewards = np.zeros((n_tests, n_repetitions))
+            for i in range(n_tests):
+                if agent == 'A2C':
+                    rewards = A2C_blackjack(model_info, hidden_size=32, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.99)
+                elif agent == 'DQL':
+                    rewards = DQL_blackjack(model_info, hidden_size=128, learning_rate=learning_rate, n_repetitions=n_repetitions, gamma=0.3)
+                total_rewards[i] = rewards
+            mean_rewards = np.mean(total_rewards, axis=0)
+            smoothed_rewards = savgol_filter(mean_rewards, window, 1)
+            if np.sum(mean_rewards) > np.sum(optimal_values[agent]["Evaluation"]):
+                optimal_values[agent]["Evaluation"] = mean_rewards
+                optimal_values[agent]["Learning_rate"] = learning_rate
+            plt.plot(smoothed_rewards, label=f'Learning Rate: {learning_rate}')
+        plt.xlabel('Number of Repetitions')
+        plt.ylabel('Average Reward')
+        plt.ylim(-1, 1)
+        plt.legend()
+        plt.savefig(f'{agent}_rewards.png')
+        plt.close()
+    return optimal_values
+
+def plot_optimal_curves(optimal_values, window):
+    """Plot the optimal curves for the two models.
+
+    Parameters:
+        optimal_values (dict): The optimal values for the two models.
+        window (int): The window size for the smoothing function.
+    """
+    plt.figure()
+    for agent in ['A2C', 'DQL']:
+        optimal_value = optimal_values[agent]["Evaluation"]
+        smoothed_rewards = savgol_filter(optimal_value, window, 1)
+        plt.plot(smoothed_rewards, label=f'{agent} - Learning Rate: {optimal_values[agent]["Learning_rate"]}')
+    plt.xlabel('Number of Repetitions')
+    plt.ylabel('Average Reward')
+    plt.ylim(-1, 1)
+    plt.legend()
+    plt.savefig('optimal_rewards.png')
+    plt.close()
     
+def test_models(n_tests, learning_rates, input_size, output_size):
+    """Test the random and trained models on the Blackjack environment and plot the results.
+
+    Parameters:
+        environment (gym.Env): The environment to test the models on.
+        n_tests (int): The number of tests to run.
+        learning_rates (list): The learning rates to test the models on.
+        input_size (int): The size of the input.
+        output_size (int): The size of the output.
+    """
+    environment = gym.make("Blackjack-v1")
     human_rates = [4222, 848, 4910]
     labels = ['Wins', 'Draws', 'Losses']
     for agent in ['Random', 'A2C', 'DQL']:
@@ -238,15 +325,12 @@ def experiment(n_tests, n_repetitions):
             total_draws = 0
             total_losses = 0
             for i in range(n_tests):
-                environment = gym.make("Blackjack-v1")
-                input_size = len(environment.observation_space)
-                output_size = environment.action_space.n
                 if agent == 'A2C':
-                    wins, losses, draws = test(input_size=input_size, hidden_size=32, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
+                    wins, losses, draws = test(environment=environment, input_size=input_size, hidden_size=32, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
                 elif agent == 'DQL':
-                    wins, losses, draws = test(input_size=input_size, hidden_size=128, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
+                    wins, losses, draws = test(environment=environment, input_size=input_size, hidden_size=128, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
                 elif random_count == 0:
-                    wins, losses, draws = test_random()
+                    wins, losses, draws = test_random(environment=environment)
                 total_wins += wins
                 total_draws += draws
                 total_losses += losses
@@ -256,6 +340,7 @@ def experiment(n_tests, n_repetitions):
             average_losses = total_losses / n_tests
             
             x = np.arange(len(labels))
+            # The following code is used to correctly align and plot the bars based on the agent
             if agent == 'A2C' or agent == 'DQL':
                 width = 0.15
                 offset = lr * width
@@ -279,10 +364,11 @@ def experiment(n_tests, n_repetitions):
         plt.close()
     
 def main():
-    n_tests = 4
+    """Run the experiment function with the right parameters."""
     environment = gym.make("Blackjack-v1")
-
-    experiment(n_tests, 20000)
+    n_tests = 10
+    n_repetitions = 5000
+    experiment(environment, n_tests, n_repetitions)
     
 if __name__ == '__main__':
     main()

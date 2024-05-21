@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import torch.nn as nn
 from collections import deque, namedtuple
 
@@ -17,9 +16,18 @@ class ActorCriticDiscrete(nn.Module):
             nn.Linear(hidden_size, 1)
         )
         
-        self.softmax = nn.Softmax(dim=0)
+        self.softmax = nn.Softmax(dim=0) # Select the action dimension
 
     def forward(self, state):
+        """Get the actor and critic output for the given state by applying the forward pass of the network and softmax on the actor output.
+
+        Parameters:
+            state (torch.Tensor): The input state for the network.
+
+        Returns:
+            actor_output (torch.Tensor): Model output for the actor network.
+            critic_output (torch.Tensor): Model output for the critic network.
+        """
         actor_output = self.actor(state)
         actor_output = self.softmax(actor_output)
         critic_output = self.critic(state)
@@ -34,16 +42,13 @@ class DeepQLearning(nn.Module):
             nn.Linear(hidden_size, output_size)
         )
     def forward(self, state):
+        """Get the model output for the given state by applying the forward pass of the network.
+
+        Parameters:
+            state (torch.Tensor): The input state for the network.
+
+        Returns:
+            output (torch.Tensor): Model output for the network.
+        """
         output = self.model(state)
         return output
-    
-class ExperienceReplay:
-    def __init__(self, capacity, batch_size):
-        self.capacity = capacity
-        self.memory = deque(maxlen=capacity)
-        self.batch_size = batch_size
-        self.experience = namedtuple('Experience', field_names=['state', 'action', 'reward', 'next_state', 'done'])
-        
-    def sample_batch(self):
-        batch = np.radnom.sample(self.memory, self.batch_size)
-        return batch
