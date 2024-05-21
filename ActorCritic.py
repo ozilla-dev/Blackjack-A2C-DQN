@@ -242,8 +242,8 @@ def experiment(environment, n_tests, n_repetitions):
     learning_rates = [0.0001, 0.0005, 0.001]
     window = 180
     
-    optimal_values = train_models(n_tests, n_repetitions, learning_rates, window)
-    plot_optimal_curves(optimal_values, window)
+    # optimal_values = train_models(n_tests, n_repetitions, learning_rates, window)
+    # plot_optimal_curves(optimal_values, window)
     test_models(n_tests, learning_rates, input_size, output_size)
         
 def train_models(n_tests, n_repetitions, learning_rates, window):
@@ -314,7 +314,6 @@ def test_models(n_tests, learning_rates, input_size, output_size):
         input_size (int): The size of the input.
         output_size (int): The size of the output.
     """
-    environment = gym.make("Blackjack-v1")
     human_rates = [4222, 848, 4910]
     labels = ['Wins', 'Draws', 'Losses']
     for agent in ['Random', 'A2C', 'DQL']:
@@ -326,11 +325,11 @@ def test_models(n_tests, learning_rates, input_size, output_size):
             total_losses = 0
             for i in range(n_tests):
                 if agent == 'A2C':
-                    wins, losses, draws = test(environment=environment, input_size=input_size, hidden_size=32, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
+                    wins, losses, draws = test(input_size=input_size, hidden_size=32, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
                 elif agent == 'DQL':
-                    wins, losses, draws = test(environment=environment, input_size=input_size, hidden_size=128, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
+                    wins, losses, draws = test(input_size=input_size, hidden_size=128, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
                 elif random_count == 0:
-                    wins, losses, draws = test_random(environment=environment)
+                    wins, losses, draws = test_random()
                 total_wins += wins
                 total_draws += draws
                 total_losses += losses
