@@ -1,6 +1,4 @@
-import numpy as np
 import torch.nn as nn
-from collections import deque, namedtuple
 
 class ActorCriticDiscrete(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
