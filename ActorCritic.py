@@ -242,8 +242,8 @@ def experiment(environment, n_tests, n_repetitions):
     learning_rates = [0.0001, 0.0005, 0.001]
     window = 180
     
-    # optimal_values = train_models(n_tests, n_repetitions, learning_rates, window)
-    # plot_optimal_curves(optimal_values, window)
+    optimal_values = train_models(n_tests, n_repetitions, learning_rates, window)
+    plot_optimal_curves(optimal_values, window)
     test_models(n_tests, learning_rates, input_size, output_size)
         
 def train_models(n_tests, n_repetitions, learning_rates, window):
