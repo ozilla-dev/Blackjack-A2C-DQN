@@ -308,7 +308,6 @@ def test_models(n_tests, learning_rates, input_size, output_size):
     """Test the random and trained models on the Blackjack environment and plot the results.
 
     Parameters:
-        environment (gym.Env): The environment to test the models on.
         n_tests (int): The number of tests to run.
         learning_rates (list): The learning rates to test the models on.
         input_size (int): The size of the input.
