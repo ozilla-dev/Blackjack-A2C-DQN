@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # Venv
-/A2C
+/A2CDQN
 
 # Distribution / packaging
 .Python
