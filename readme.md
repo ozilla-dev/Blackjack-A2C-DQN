@@ -30,8 +30,9 @@ Due to limited resources, I was unable to extensively search for the optimal par
     python AgentExperiments.py
     ```
 
-This will train the models and save the results in the [models](http://_vscodecontentref_/0) and [images](http://_vscodecontentref_/1) directories.
-
 ## Learning Outcomes
 
 This project helped me gain a deeper understanding of Deep Reinforcement Learning and how to work with gym environments.
+
+## Results
+The results show A2C did not manage to beat an experienced human at Blackjack, while DQN did manage to be slightly better. The results are visible in the `images` folder.
