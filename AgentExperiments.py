@@ -74,7 +74,7 @@ def A2C_blackjack(model_info, hidden_size, learning_rate, n_repetitions, gamma):
             optimizer_critic.step()
             state = next_state
     environment.close()
-    torch.save(model.state_dict(), f'A2C_blackjack_{model_info}.pth')
+    torch.save(model.state_dict(), f'models/A2C_blackjack_{model_info}.pth')
     return total_rewards
 
 def DQL_blackjack(model_info, hidden_size, learning_rate, n_repetitions, gamma):
@@ -147,7 +147,7 @@ def DQL_blackjack(model_info, hidden_size, learning_rate, n_repetitions, gamma):
                 optimizer.step()
                 state = next_state
     environment.close()
-    torch.save(model.state_dict(), f'DQL_blackjack_{model_info}.pth')
+    torch.save(model.state_dict(), f'models/DQL_blackjack_{model_info}.pth')
     return total_rewards
 
 def test(input_size, hidden_size, output_size, weights, A2C):
@@ -281,7 +281,7 @@ def train_models(n_tests, n_repetitions, learning_rates, window):
         plt.ylabel('Average Reward')
         plt.ylim(-1, 1)
         plt.legend()
-        plt.savefig(f'{agent}_rewards.png')
+        plt.savefig(f'images/{agent}_rewards.png')
         plt.close()
     return optimal_values
 
@@ -301,7 +301,7 @@ def plot_optimal_curves(optimal_values, window):
     plt.ylabel('Average Reward')
     plt.ylim(-1, 1)
     plt.legend()
-    plt.savefig('optimal_rewards.png')
+    plt.savefig('images/optimal_rewards.png')
     plt.close()
     
 def test_models(n_tests, learning_rates, input_size, output_size):
@@ -324,9 +324,9 @@ def test_models(n_tests, learning_rates, input_size, output_size):
             total_losses = 0
             for i in range(n_tests):
                 if agent == 'A2C':
-                    wins, losses, draws = test(input_size=input_size, hidden_size=32, output_size=output_size, weights=f'A2C_blackjack_{learning_rate}.pth', A2C=True)
+                    wins, losses, draws = test(input_size=input_size, hidden_size=32, output_size=output_size, weights=f'models/A2C_blackjack_{learning_rate}.pth', A2C=True)
                 elif agent == 'DQL':
-                    wins, losses, draws = test(input_size=input_size, hidden_size=128, output_size=output_size, weights=f'DQL_blackjack_{learning_rate}.pth', A2C=False)
+                    wins, losses, draws = test(input_size=input_size, hidden_size=128, output_size=output_size, weights=f'models/DQL_blackjack_{learning_rate}.pth', A2C=False)
                 elif random_count == 0:
                     wins, losses, draws = test_random()
                 total_wins += wins
@@ -358,7 +358,7 @@ def test_models(n_tests, learning_rates, input_size, output_size):
         plt.ylabel('Number of occurences')   
         plt.ylim(0, 10000)
         plt.legend()
-        plt.savefig(f'{agent}_blackjack.png')
+        plt.savefig(f'images/{agent}_blackjack.png')
         plt.close()
     
 def main():
